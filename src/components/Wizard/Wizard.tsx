@@ -22,7 +22,7 @@ interface Field {
     | "number"
     | "textarea"
     | "validators"
-    | "toggle"
+    | "radio"
     | "file"
     | "button";
   required?: boolean;
@@ -32,6 +32,7 @@ interface Field {
   multiple?: boolean; // for file inputs
   placeholder?: string;
   dependsOn?: { field: string; value: any }; // conditional rendering
+  accept?: string;
 }
 
 interface Step {
@@ -138,10 +139,6 @@ export const Wizard: React.FC<WizardProps> = ({
             newErrors[`${field.name}-${idx}-nodeId`] = `Validator #${
               idx + 1
             } Node ID is required`;
-          } else if (!validator.nodeId.startsWith("NodeID-")) {
-            newErrors[`${field.name}-${idx}-nodeId`] = `Validator #${
-              idx + 1
-            } Node ID must start with "NodeID-"`;
           } else if (nodeIds.has(validator.nodeId)) {
             newErrors[`${field.name}-${idx}-nodeId`] = `Validator #${
               idx + 1
@@ -365,16 +362,38 @@ export const Wizard: React.FC<WizardProps> = ({
       );
     }
 
-    if (field.type === "toggle") {
+    if (field.type === "radio") {
       return (
-        <label style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-          <input
-            type="checkbox"
-            checked={!!value}
-            onChange={(e) => setField(field.name, e.target.checked)}
-          />
-          <span>{value ? "Yes" : "No"}</span>
-        </label>
+        <div
+          role="radiogroup"
+          aria-label={field.label}
+          style={{ display: "inline-flex", gap: 16 }}
+        >
+          <label
+            style={{ display: "inline-flex", alignItems: "center", gap: 8 }}
+          >
+            <input
+              type="radio"
+              name={field.name}
+              value="yes"
+              checked={value === true}
+              onChange={() => setField(field.name, true)}
+            />
+            <span>Yes</span>
+          </label>
+          <label
+            style={{ display: "inline-flex", alignItems: "center", gap: 8 }}
+          >
+            <input
+              type="radio"
+              name={field.name}
+              value="no"
+              checked={value === false}
+              onChange={() => setField(field.name, false)}
+            />
+            <span>No</span>
+          </label>
+        </div>
       );
     }
 
@@ -383,6 +402,7 @@ export const Wizard: React.FC<WizardProps> = ({
         <input
           type="file"
           multiple={field.multiple}
+          accept={field.accept}
           onChange={(e) => handleFileChange(e, field.name)}
         />
       );

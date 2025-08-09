@@ -8,10 +8,10 @@ const App = () => {
   const handleSubmit = async (data: any) => {
     try {
       const result = await createSubnet(data);
-      alert("Subnet created successfully!");
+      console.log("Subnet created successfully!");
       console.log("Subnet creation result:", result);
     } catch (err) {
-      alert("Subnet creation failed: " + (err as Error).message);
+      console.log("Subnet creation failed: " + (err as Error).message);
     }
   };
 

@@ -92,7 +92,7 @@ export const wizardSteps = [
         label: "Number of Validators",
         type: "number",
         placeholder: "e.g., 2 or 5",
-        min: 2,
+        min: 1,
         max: 20,
         required: true,
       },
@@ -111,30 +111,26 @@ export const wizardSteps = [
     fields: [
       {
         name: "predeployedContracts",
-        label: "Any pre-deployed smart contracts at genesis?",
-        type: "toggle",
+        label:
+          "Do you want any smart contracts pre-deployed at genesis? (Yes/No)",
+        type: "radio",
         required: true,
       },
       {
         name: "uploadContracts",
-        label: "Upload Smart Contracts",
+        label: "Upload Smart Contracts (bytecode or artifacts)",
         type: "file",
         multiple: true,
         required: false,
         dependsOn: { field: "predeployedContracts", value: true },
-      },
-      {
-        name: "fetchPredefinedContracts",
-        label: "Fetch Predefined Contracts from Avalanche",
-        type: "button",
-        required: false,
-        dependsOn: { field: "predeployedContracts", value: true },
+        accept: ".json,.bin,.wasm", // restrict to typical compiled contract formats
+        description: "Upload compiled contract files to be deployed at genesis",
       },
       {
         name: "transactionFees",
         label: "Transaction Fees",
         type: "select",
-        options: ["Low", "Free", "Normal"],
+        options: ["Low : 0.001", "Free : 0", "Normal : 0.01", "High : 0.05"],
         required: false,
         placeholder: "Select transaction fee model",
       },
