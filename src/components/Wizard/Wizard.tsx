@@ -3,15 +3,35 @@ import { useWizard } from "./WizardContext";
 import { TextInput } from "./fields/TextInput";
 import { TextArea } from "./fields/TextArea";
 import { NumberInput } from "./fields/NumberInput";
+import { SelectInput } from "./fields/SelectInput";
+
+interface Validator {
+  nodeId: string;
+  stakeAmount: number | "";
+  stakeStart: string; // ISO date string
+  stakeEnd: string; // ISO date string
+  rewardAddress: string;
+}
 
 interface Field {
   name: string;
   label: string;
-  type: "text" | "number" | "textarea" | "predeployedContracts";
+  type:
+    | "select"
+    | "text"
+    | "number"
+    | "textarea"
+    | "validators"
+    | "toggle"
+    | "file"
+    | "button";
   required?: boolean;
   min?: number;
   max?: number;
-  options?: string[]; // for presets dropdown
+  options?: string[];
+  multiple?: boolean; // for file inputs
+  placeholder?: string;
+  dependsOn?: { field: string; value: any }; // conditional rendering
 }
 
 interface Step {
@@ -23,21 +43,19 @@ interface Step {
 interface WizardProps {
   steps: Step[];
   onSubmit: (data: any) => Promise<void> | void;
+  onFetchPredefinedContracts?: () => void; // callback prop for fetch button
 }
 
-export const Wizard: React.FC<WizardProps> = ({ steps, onSubmit }) => {
+export const Wizard: React.FC<WizardProps> = ({
+  steps,
+  onSubmit,
+  onFetchPredefinedContracts,
+}) => {
   const { data, setField } = useWizard();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [animateTitle, setAnimateTitle] = useState(true);
-
-  // States for predeployedContracts UI & validation
-  const [selectedPreset, setSelectedPreset] = useState<string>("");
-  const [uploadedContractFile, setUploadedContractFile] = useState<File | null>(
-    null
-  );
-  const [showContractOptions, setShowContractOptions] = useState(false);
 
   const currentStep = steps[currentStepIndex];
 
@@ -48,20 +66,62 @@ export const Wizard: React.FC<WizardProps> = ({ steps, onSubmit }) => {
     return () => clearTimeout(timeout);
   }, [currentStepIndex]);
 
+  // This useEffect is the CORRECT place to manage the validators array based on validatorCount
+  useEffect(() => {
+    const count = Number(data.validatorCount) || 0;
+    const currentValidators = Array.isArray(data.validators)
+      ? data.validators
+      : [];
+
+    if (currentValidators.length !== count) {
+      // Create a new array of the target length, preserving existing validators
+      const newValidators = Array.from({ length: count }, (_, index) => {
+        // If a validator already exists at this index, keep it. Otherwise, create a new one.
+        return (
+          currentValidators[index] || {
+            nodeId: `NodeID-${index + 1}`, // Auto-generate a default ID
+            stakeAmount: "",
+            stakeStart: "",
+            stakeEnd: "",
+            rewardAddress: "",
+          }
+        );
+      });
+
+      setField("validators", newValidators);
+    }
+  }, [data.validatorCount, setField]); // Added setField to dependency array
+
+  // Helper: Check if field should be shown based on dependsOn
+  const shouldShowField = (field: Field) => {
+    if (!field.dependsOn) return true;
+    const { field: depField, value } = field.dependsOn;
+    if (typeof value === "function") {
+      return value(data[depField]);
+    }
+    return data[depField] === value;
+  };
+
   const validateStep = (): boolean => {
     const newErrors: Record<string, string> = {};
     currentStep.fields.forEach((field) => {
+      if (!shouldShowField(field)) return; // skip validation if field hidden
       const value = data[field.name];
+
       if (field.required) {
         if (
           value === undefined ||
           value === "" ||
-          (typeof value === "number" && isNaN(value))
+          (typeof value === "number" && isNaN(value)) ||
+          (field.type === "validators" &&
+            Array.isArray(value) &&
+            value.length === 0)
         ) {
           newErrors[field.name] = `${field.label} is required`;
           return;
         }
       }
+
       if (field.type === "number" && typeof value === "number") {
         if (field.min !== undefined && value < field.min) {
           newErrors[field.name] = `${field.label} must be >= ${field.min}`;
@@ -71,17 +131,59 @@ export const Wizard: React.FC<WizardProps> = ({ steps, onSubmit }) => {
         }
       }
 
-      if (field.type === "predeployedContracts") {
-        const hasPredeployed = value;
-        if (field.required && hasPredeployed === undefined) {
-          newErrors[field.name] = `${field.label} is required`;
-        }
-        if (hasPredeployed) {
-          if (!selectedPreset && !uploadedContractFile) {
-            newErrors[field.name] =
-              "Please select a preset or upload a contract JSON file.";
+      if (field.type === "validators" && Array.isArray(value)) {
+        const nodeIds = new Set<string>();
+        value.forEach((validator: Validator, idx: number) => {
+          if (!validator.nodeId) {
+            newErrors[`${field.name}-${idx}-nodeId`] = `Validator #${
+              idx + 1
+            } Node ID is required`;
+          } else if (!validator.nodeId.startsWith("NodeID-")) {
+            newErrors[`${field.name}-${idx}-nodeId`] = `Validator #${
+              idx + 1
+            } Node ID must start with "NodeID-"`;
+          } else if (nodeIds.has(validator.nodeId)) {
+            newErrors[`${field.name}-${idx}-nodeId`] = `Validator #${
+              idx + 1
+            } Node ID must be unique`;
+          } else {
+            nodeIds.add(validator.nodeId);
           }
-        }
+
+          if (validator.stakeAmount === "" || validator.stakeAmount < 0) {
+            newErrors[`${field.name}-${idx}-stakeAmount`] = `Validator #${
+              idx + 1
+            } Stake Amount must be >= 0`;
+          }
+
+          if (!validator.stakeStart) {
+            newErrors[`${field.name}-${idx}-stakeStart`] = `Validator #${
+              idx + 1
+            } Stake Start Time is required`;
+          }
+
+          if (!validator.stakeEnd) {
+            newErrors[`${field.name}-${idx}-stakeEnd`] = `Validator #${
+              idx + 1
+            } Stake End Time is required`;
+          }
+
+          if (
+            validator.stakeStart &&
+            validator.stakeEnd &&
+            new Date(validator.stakeStart) >= new Date(validator.stakeEnd)
+          ) {
+            newErrors[`${field.name}-${idx}-stakeEnd`] = `Validator #${
+              idx + 1
+            } Stake End Time must be after Stake Start Time`;
+          }
+
+          if (!validator.rewardAddress) {
+            newErrors[`${field.name}-${idx}-rewardAddress`] = `Validator #${
+              idx + 1
+            } Reward Address is required`;
+          }
+        });
       }
     });
 
@@ -110,103 +212,192 @@ export const Wizard: React.FC<WizardProps> = ({ steps, onSubmit }) => {
     if (!validateStep()) return;
     setSubmitting(true);
     try {
-      // Add the uploaded contract file and selected preset data into form data before submit
-      const formData = { ...data };
-      formData["selectedPreset"] = selectedPreset;
-      if (uploadedContractFile) {
-        formData["uploadedContractFileName"] = uploadedContractFile.name;
-        // You can add actual file content upload handling separately
-      }
-      await onSubmit(formData);
+      await onSubmit(data);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const renderField = (field: Field) => {
-    const value = data[field.name] ?? (field.type === "number" ? "" : "");
-    const error = errors[field.name];
+  const handleFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    fieldName: string
+  ) => {
+    if (e.target.files) {
+      setField(fieldName, Array.from(e.target.files));
+    }
+  };
 
-    if (field.type === "predeployedContracts") {
-      const hasPredeployed = !!data[field.name];
+  const renderValidatorField = (
+    validator: Validator,
+    idx: number,
+    onValidatorChange: (idx: number, key: keyof Validator, val: any) => void
+  ) => {
+    return (
+      <div
+        key={idx}
+        style={{
+          marginBottom: 20,
+          padding: 10,
+          border: "1px solid #ccc",
+          borderRadius: 6,
+        }}
+      >
+        <h4>Validator #{idx + 1}</h4>
 
-      return (
-        <>
-          <label style={{ marginRight: 16 }}>
-            <input
-              type="radio"
-              name={field.name}
-              value="yes"
-              checked={hasPredeployed === true}
-              onChange={() => {
-                setField(field.name, true);
-                setShowContractOptions(true);
-              }}
-            />{" "}
-            Yes
-          </label>
-          <label>
-            <input
-              type="radio"
-              name={field.name}
-              value="no"
-              checked={hasPredeployed === false}
-              onChange={() => {
-                setField(field.name, false);
-                setShowContractOptions(false);
-                setSelectedPreset("");
-                setUploadedContractFile(null);
-              }}
-            />{" "}
-            No
-          </label>
-
-          {showContractOptions && (
-            <div
-              style={{
-                marginTop: 16,
-                paddingLeft: 24,
-                borderLeft: "3px solid var(--color-primary-red)",
-              }}
-            >
-              <label>
-                Select a contract preset:{" "}
-                <select
-                  value={selectedPreset}
-                  onChange={(e) => setSelectedPreset(e.target.value)}
-                  style={{ marginLeft: 8, padding: 6, borderRadius: 4 }}
-                >
-                  <option value="">--Select--</option>
-                  {field.options?.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <div style={{ marginTop: 16 }}>
-                <label>
-                  Or upload contract JSON:{" "}
-                  <input
-                    type="file"
-                    accept=".json"
-                    onChange={(e) =>
-                      setUploadedContractFile(e.target.files?.[0] || null)
-                    }
-                    style={{ marginLeft: 8 }}
-                  />
-                </label>
-                {uploadedContractFile && (
-                  <div style={{ marginTop: 8, fontStyle: "italic" }}>
-                    Selected file: {uploadedContractFile.name}
-                  </div>
-                )}
-              </div>
+        <label>
+          Node ID
+          <input
+            type="text"
+            placeholder="e.g. NodeID-1 or auto-generate"
+            value={validator.nodeId}
+            onChange={(e) => onValidatorChange(idx, "nodeId", e.target.value)}
+          />
+          {errors[`validators-${idx}-nodeId`] && (
+            <div className="field-error">
+              {errors[`validators-${idx}-nodeId`]}
             </div>
           )}
-          {error && <div className="field-error">{error}</div>}
-        </>
+        </label>
+
+        <label>
+          Stake Amount (AVAX)
+          <input
+            type="number"
+            min={0}
+            placeholder="Stake amount"
+            value={validator.stakeAmount}
+            onChange={(e) =>
+              onValidatorChange(idx, "stakeAmount", Number(e.target.value))
+            }
+          />
+          {errors[`validators-${idx}-stakeAmount`] && (
+            <div className="field-error">
+              {errors[`validators-${idx}-stakeAmount`]}
+            </div>
+          )}
+        </label>
+
+        <label>
+          Stake Start Time
+          <input
+            type="date"
+            value={validator.stakeStart}
+            onChange={(e) =>
+              onValidatorChange(idx, "stakeStart", e.target.value)
+            }
+          />
+          {errors[`validators-${idx}-stakeStart`] && (
+            <div className="field-error">
+              {errors[`validators-${idx}-stakeStart`]}
+            </div>
+          )}
+        </label>
+
+        <label>
+          Stake End Time
+          <input
+            type="date"
+            value={validator.stakeEnd}
+            onChange={(e) => onValidatorChange(idx, "stakeEnd", e.target.value)}
+          />
+          {errors[`validators-${idx}-stakeEnd`] && (
+            <div className="field-error">
+              {errors[`validators-${idx}-stakeEnd`]}
+            </div>
+          )}
+        </label>
+
+        <label>
+          Reward Address
+          <input
+            type="text"
+            placeholder="Wallet address for rewards"
+            value={validator.rewardAddress}
+            onChange={(e) =>
+              onValidatorChange(idx, "rewardAddress", e.target.value)
+            }
+          />
+          {errors[`validators-${idx}-rewardAddress`] && (
+            <div className="field-error">
+              {errors[`validators-${idx}-rewardAddress`]}
+            </div>
+          )}
+        </label>
+      </div>
+    );
+  };
+
+  const renderField = (field: Field) => {
+    if (!shouldShowField(field)) return null;
+
+    const value = data[field.name];
+    const error = errors[field.name];
+
+    if (field.type === "validators") {
+      const validatorsData: Validator[] = Array.isArray(value) ? value : [];
+      const onValidatorChange = (
+        idx: number,
+        key: keyof Validator,
+        val: any
+      ) => {
+        const newValidators = [...validatorsData];
+        newValidators[idx] = { ...newValidators[idx], [key]: val };
+        setField(field.name, newValidators);
+      };
+
+      return (
+        <div>
+          {/* *** FIX: Loop directly over the `validatorsData` array from state. *** */}
+          {validatorsData.map((validator, idx) =>
+            renderValidatorField(validator, idx, onValidatorChange)
+          )}
+        </div>
+      );
+    }
+
+    if (field.type === "select" && field.options) {
+      return (
+        <SelectInput
+          value={value as string}
+          options={field.options}
+          onChange={(val) => setField(field.name, val)}
+        />
+      );
+    }
+
+    if (field.type === "toggle") {
+      return (
+        <label style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+          <input
+            type="checkbox"
+            checked={!!value}
+            onChange={(e) => setField(field.name, e.target.checked)}
+          />
+          <span>{value ? "Yes" : "No"}</span>
+        </label>
+      );
+    }
+
+    if (field.type === "file") {
+      return (
+        <input
+          type="file"
+          multiple={field.multiple}
+          onChange={(e) => handleFileChange(e, field.name)}
+        />
+      );
+    }
+
+    if (field.type === "button") {
+      return (
+        <button
+          type="button"
+          onClick={() =>
+            onFetchPredefinedContracts && onFetchPredefinedContracts()
+          }
+        >
+          {field.label}
+        </button>
       );
     }
 
@@ -215,6 +406,7 @@ export const Wizard: React.FC<WizardProps> = ({ steps, onSubmit }) => {
         return (
           <TextInput
             value={value as string}
+            placeholder={field.placeholder}
             onChange={(val) => setField(field.name, val)}
           />
         );
@@ -222,15 +414,17 @@ export const Wizard: React.FC<WizardProps> = ({ steps, onSubmit }) => {
         return (
           <TextArea
             value={value as string}
+            placeholder={field.placeholder}
             onChange={(val) => setField(field.name, val)}
           />
         );
       case "number":
         return (
           <NumberInput
-            value={value as number | ""}
+            value={typeof value === "number" ? value : ""}
             min={field.min}
             max={field.max}
+            placeholder={field.placeholder}
             onChange={(val) => setField(field.name, val)}
           />
         );
@@ -249,18 +443,21 @@ export const Wizard: React.FC<WizardProps> = ({ steps, onSubmit }) => {
       </nav>
 
       <main className="wizard-container">
-        {currentStep.fields.map((field) => (
-          <div key={field.name} className="wizard-field">
-            <label>
-              {field.label}
-              {field.required && <span className="required">*</span>}
-            </label>
-            {renderField(field)}
-            {errors[field.name] && (
-              <div className="field-error">{errors[field.name]}</div>
-            )}
-          </div>
-        ))}
+        {currentStep.fields.map((field) => {
+          const error = errors[field.name];
+          return (
+            <div key={field.name} className="wizard-field">
+              <label>
+                {field.label}
+                {field.required && <span className="required">*</span>}
+              </label>
+              {renderField(field)}
+              {field.type !== "validators" && error && (
+                <div className="field-error">{error}</div>
+              )}
+            </div>
+          );
+        })}
 
         <div className="wizard-actions">
           <button

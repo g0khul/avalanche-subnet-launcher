@@ -1,11 +1,29 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 
-type FieldValue = string | number | boolean | undefined;
+// Extend FieldValue to include any object or array type needed
+export type Validator = {
+  nodeId: string;
+  stakeAmount: string | number;
+  stakeStart: string; // ISO string or date
+  stakeEnd: string;
+  rewardAddress: string;
+};
+
+export type PredeployedContract = {
+  // define shape if needed, else use any
+  name: string;
+  file?: File;
+};
+
+export type FieldValue =
+  | string
+  | number
+  | boolean
+  | undefined
+  | Validator[]
+  | PredeployedContract[]
+  | Record<string, any> // fallback for other complex objects
+  | null;
 
 interface FormData {
   [key: string]: FieldValue;

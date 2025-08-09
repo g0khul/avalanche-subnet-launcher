@@ -1,4 +1,5 @@
 export async function createSubnet(data: any) {
+  console.log("data : ", data);
   // Replace with your real backend URL & logic
   const res = await fetch("/api/subnet/create", {
     method: "POST",
