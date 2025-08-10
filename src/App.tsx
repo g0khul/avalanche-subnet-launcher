@@ -1,26 +1,14 @@
-import { WizardProvider } from "./components/Wizard/WizardContext";
-import { Wizard } from "./components/Wizard/Wizard";
+import React from "react";
+import { Routes, Route } from "react-router-dom";
+import Home from "./pages/Home";
+import DashboardPage from "./pages/DashboardPage";
+import "./index.css"; // <-- This line is crucial
 
-import { createSubnet } from "./api/subnet";
-import { wizardSteps } from "./constants/wizardSteps";
-
-const App = () => {
-  const handleSubmit = async (data: any) => {
-    try {
-      const result = await createSubnet(data);
-      console.log("Subnet created successfully!");
-      console.log("Subnet creation result:", result);
-    } catch (err) {
-      console.log("Subnet creation failed: " + (err as Error).message);
-    }
-  };
-
-  return (
-    <WizardProvider>
-      {/* <FluidBackground /> */}
-      <Wizard steps={wizardSteps} onSubmit={handleSubmit} />
-    </WizardProvider>
-  );
-};
+const App: React.FC = () => (
+  <Routes>
+    <Route path="/" element={<Home />} />
+    <Route path="/dashboard" element={<DashboardPage />} />
+  </Routes>
+);
 
 export default App;
