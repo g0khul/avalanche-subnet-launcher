@@ -20,13 +20,6 @@ export const TextInput: React.FC<TextInputProps> = ({
       placeholder={placeholder}
       disabled={disabled}
       onChange={(e) => onChange(e.target.value)}
-      style={{
-        width: "100%",
-        padding: "8px",
-        borderRadius: 6,
-        border: "1px solid #ccc",
-        fontSize: 16,
-      }}
     />
   );
 };

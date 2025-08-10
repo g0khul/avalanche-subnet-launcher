@@ -29,13 +29,6 @@ export const NumberInput: React.FC<NumberInputProps> = ({
         const val = e.target.value;
         onChange(val === "" ? "" : Number(val));
       }}
-      style={{
-        width: "100%",
-        padding: "8px",
-        borderRadius: 6,
-        border: "1px solid #ccc",
-        fontSize: 16,
-      }}
     />
   );
 };

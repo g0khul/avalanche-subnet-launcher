@@ -3,8 +3,8 @@ import React, { useEffect } from "react";
 interface Validator {
   nodeId: string;
   stakeAmount: number | "";
-  stakeStart: string; // ISO date string
-  stakeEnd: string;
+  stakeStartTime: string; // ISO date string
+  stakeEndTime: string;
   rewardAddress: string;
 }
 
@@ -29,8 +29,8 @@ export const ValidatorsInput: React.FC<ValidatorsInputProps> = ({
         newVals.push({
           nodeId: "",
           stakeAmount: "",
-          stakeStart: "",
-          stakeEnd: "",
+          stakeStartTime: "",
+          stakeEndTime: "",
           rewardAddress: "",
         });
       }
@@ -66,12 +66,6 @@ export const ValidatorsInput: React.FC<ValidatorsInputProps> = ({
             placeholder={`NodeID-${i + 1}`}
             value={value[i]?.nodeId ?? ""}
             onChange={(e) => updateValidator(i, "nodeId", e.target.value)}
-            style={{
-              width: "100%",
-              marginBottom: 12,
-              padding: 8,
-              borderRadius: 4,
-            }}
           />
 
           <label>Stake Amount</label>
@@ -86,38 +80,22 @@ export const ValidatorsInput: React.FC<ValidatorsInputProps> = ({
                 e.target.value === "" ? "" : Number(e.target.value)
               )
             }
-            style={{
-              width: "100%",
-              marginBottom: 12,
-              padding: 8,
-              borderRadius: 4,
-            }}
           />
 
           <label>Stake Start Time</label>
           <input
             type="date"
-            value={value[i]?.stakeStart ?? ""}
-            onChange={(e) => updateValidator(i, "stakeStart", e.target.value)}
-            style={{
-              width: "100%",
-              marginBottom: 12,
-              padding: 8,
-              borderRadius: 4,
-            }}
+            value={value[i]?.stakeStartTime ?? ""}
+            onChange={(e) =>
+              updateValidator(i, "stakeStartTime", e.target.value)
+            }
           />
 
           <label>Stake End Time</label>
           <input
             type="date"
-            value={value[i]?.stakeEnd ?? ""}
-            onChange={(e) => updateValidator(i, "stakeEnd", e.target.value)}
-            style={{
-              width: "100%",
-              marginBottom: 12,
-              padding: 8,
-              borderRadius: 4,
-            }}
+            value={value[i]?.stakeEndTime ?? ""}
+            onChange={(e) => updateValidator(i, "stakeEndTime", e.target.value)}
           />
 
           <label>Reward Address</label>
@@ -127,12 +105,6 @@ export const ValidatorsInput: React.FC<ValidatorsInputProps> = ({
             onChange={(e) =>
               updateValidator(i, "rewardAddress", e.target.value)
             }
-            style={{
-              width: "100%",
-              marginBottom: 12,
-              padding: 8,
-              borderRadius: 4,
-            }}
           />
         </div>
       ))}

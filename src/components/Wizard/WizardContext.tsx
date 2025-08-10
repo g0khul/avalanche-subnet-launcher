@@ -4,8 +4,8 @@ import { createContext, useContext, useState, type ReactNode } from "react";
 export type Validator = {
   nodeId: string;
   stakeAmount: string | number;
-  stakeStart: string; // ISO string or date
-  stakeEnd: string;
+  stakeStartTime: string; // ISO string or date
+  stakeEndTime: string;
   rewardAddress: string;
 };
 

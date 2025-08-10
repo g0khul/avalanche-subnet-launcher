@@ -8,14 +8,14 @@ export const wizardSteps = [
         label: "Name of your gaming chain",
         type: "text",
         placeholder: "e.g., My Awesome Game Chain",
-        required: true,
+        // required: true,
       },
       {
         name: "chainId",
         label: "Chain ID",
         type: "text",
         placeholder: "short, lowercase, 1-8 chars (e.g., game01)",
-        required: true,
+        // required: true,
         pattern: /^[a-z0-9]{1,8}$/,
         patternError:
           "Chain ID must be 1-8 characters, lowercase letters and numbers only",
@@ -42,7 +42,7 @@ export const wizardSteps = [
         maxLength: 5,
       },
       {
-        name: "initialSupply",
+        name: "initialTokenSupply",
         label: "Initial Supply",
         type: "number",
         placeholder: "Number of tokens to mint at launch",
@@ -50,7 +50,7 @@ export const wizardSteps = [
         min: 0,
       },
       {
-        name: "decimalPrecision",
+        name: "tokenDecimalPrecision",
         label: "Token Decimal Precision",
         type: "number",
         placeholder: "Usually 18",
@@ -69,16 +69,16 @@ export const wizardSteps = [
         label: "Block Time (seconds per block)",
         type: "number",
         placeholder: "e.g., 2 or 5",
-        required: true,
+        // required: true,
         min: 1,
         max: 60,
       },
       {
-        name: "gasLimit",
+        name: "gasLimitPerBlock",
         label: "Gas Limit per Block",
         type: "number",
         placeholder: "Default ~15,000,000",
-        required: true,
+        // required: true,
         min: 1000000,
       },
     ],
@@ -94,13 +94,13 @@ export const wizardSteps = [
         placeholder: "e.g., 2 or 5",
         min: 1,
         max: 20,
-        required: true,
+        // required: true,
       },
       {
         name: "validators",
         label: "Validator Details",
         type: "validators", // your custom field type
-        required: true,
+        // required: true,
         dependsOn: { field: "validatorCount", value: (val: number) => val > 0 }, // optional conditional rendering
       },
     ],
@@ -114,10 +114,10 @@ export const wizardSteps = [
         label:
           "Do you want any smart contracts pre-deployed at genesis? (Yes/No)",
         type: "radio",
-        required: true,
+        // required: true,
       },
       {
-        name: "uploadContracts",
+        name: "contractFiles",
         label: "Upload Smart Contracts (bytecode or artifacts)",
         type: "file",
         multiple: true,
@@ -127,7 +127,16 @@ export const wizardSteps = [
         description: "Upload compiled contract files to be deployed at genesis",
       },
       {
-        name: "transactionFees",
+        name: "constructorArgs",
+        label: "Constructor Arguments (JSON Array)",
+        type: "textarea",
+        placeholder: 'e.g., ["arg1", 123, true]',
+        dependsOn: { field: "predeployedContracts", value: true },
+        description:
+          "Enter the constructor arguments for the predeployed contracts as a JSON array.",
+      },
+      {
+        name: "specialTransactionFees",
         label: "Transaction Fees",
         type: "select",
         options: ["Low : 0.001", "Free : 0", "Normal : 0.01", "High : 0.05"],

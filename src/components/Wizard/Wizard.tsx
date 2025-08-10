@@ -8,8 +8,8 @@ import { SelectInput } from "./fields/SelectInput";
 interface Validator {
   nodeId: string;
   stakeAmount: number | "";
-  stakeStart: string; // ISO date string
-  stakeEnd: string; // ISO date string
+  stakeStartTime: string; // ISO date string
+  stakeEndTime: string; // ISO date string
   rewardAddress: string;
 }
 
@@ -24,7 +24,8 @@ interface Field {
     | "validators"
     | "radio"
     | "file"
-    | "button";
+    | "button"
+    | "textarea";
   required?: boolean;
   min?: number;
   max?: number;
@@ -80,10 +81,10 @@ export const Wizard: React.FC<WizardProps> = ({
         // If a validator already exists at this index, keep it. Otherwise, create a new one.
         return (
           currentValidators[index] || {
-            nodeId: `NodeID-${index + 1}`, // Auto-generate a default ID
+            nodeId: "",
             stakeAmount: "",
-            stakeStart: "",
-            stakeEnd: "",
+            stakeStartTime: "",
+            stakeEndTime: "",
             rewardAddress: "",
           }
         );
@@ -153,24 +154,25 @@ export const Wizard: React.FC<WizardProps> = ({
             } Stake Amount must be >= 0`;
           }
 
-          if (!validator.stakeStart) {
-            newErrors[`${field.name}-${idx}-stakeStart`] = `Validator #${
+          if (!validator.stakeStartTime) {
+            newErrors[`${field.name}-${idx}-stakeStartTime`] = `Validator #${
               idx + 1
             } Stake Start Time is required`;
           }
 
-          if (!validator.stakeEnd) {
-            newErrors[`${field.name}-${idx}-stakeEnd`] = `Validator #${
+          if (!validator.stakeEndTime) {
+            newErrors[`${field.name}-${idx}-stakeEndTime`] = `Validator #${
               idx + 1
             } Stake End Time is required`;
           }
 
           if (
-            validator.stakeStart &&
-            validator.stakeEnd &&
-            new Date(validator.stakeStart) >= new Date(validator.stakeEnd)
+            validator.stakeStartTime &&
+            validator.stakeEndTime &&
+            new Date(validator.stakeStartTime) >=
+              new Date(validator.stakeEndTime)
           ) {
-            newErrors[`${field.name}-${idx}-stakeEnd`] = `Validator #${
+            newErrors[`${field.name}-${idx}-stakeEndTime`] = `Validator #${
               idx + 1
             } Stake End Time must be after Stake Start Time`;
           }
@@ -278,14 +280,14 @@ export const Wizard: React.FC<WizardProps> = ({
           Stake Start Time
           <input
             type="date"
-            value={validator.stakeStart}
+            value={validator.stakeStartTime}
             onChange={(e) =>
-              onValidatorChange(idx, "stakeStart", e.target.value)
+              onValidatorChange(idx, "stakeStartTime", e.target.value)
             }
           />
-          {errors[`validators-${idx}-stakeStart`] && (
+          {errors[`validators-${idx}-stakeStartTime`] && (
             <div className="field-error">
-              {errors[`validators-${idx}-stakeStart`]}
+              {errors[`validators-${idx}-stakeStartTime`]}
             </div>
           )}
         </label>
@@ -294,12 +296,14 @@ export const Wizard: React.FC<WizardProps> = ({
           Stake End Time
           <input
             type="date"
-            value={validator.stakeEnd}
-            onChange={(e) => onValidatorChange(idx, "stakeEnd", e.target.value)}
+            value={validator.stakeEndTime}
+            onChange={(e) =>
+              onValidatorChange(idx, "stakeEndTime", e.target.value)
+            }
           />
-          {errors[`validators-${idx}-stakeEnd`] && (
+          {errors[`validators-${idx}-stakeEndTime`] && (
             <div className="field-error">
-              {errors[`validators-${idx}-stakeEnd`]}
+              {errors[`validators-${idx}-stakeEndTime`]}
             </div>
           )}
         </label>
@@ -358,6 +362,17 @@ export const Wizard: React.FC<WizardProps> = ({
           value={value as string}
           options={field.options}
           onChange={(val) => setField(field.name, val)}
+        />
+      );
+    }
+
+    if (field.type === "textarea") {
+      return (
+        <textarea
+          value={(value as string) || ""}
+          placeholder={field.placeholder || ""}
+          onChange={(e) => setField(field.name, e.target.value)}
+          rows={4} // or any default you want
         />
       );
     }

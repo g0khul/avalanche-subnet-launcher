@@ -20,14 +20,6 @@ export const TextArea: React.FC<TextAreaProps> = ({
       disabled={disabled}
       onChange={(e) => onChange(e.target.value)}
       rows={4}
-      style={{
-        width: "100%",
-        padding: "8px",
-        borderRadius: 6,
-        border: "1px solid #ccc",
-        fontSize: 16,
-        resize: "vertical",
-      }}
     />
   );
 };

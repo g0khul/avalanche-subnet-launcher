@@ -11,19 +11,9 @@ export const SelectInput: React.FC<SelectInputProps> = ({
   options,
   onChange,
 }) => {
+  value = value ? value : "Low : 0.001";
   return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      style={{
-        width: "100%",
-        padding: 8,
-        borderRadius: 4,
-        marginBottom: 12,
-        border: "1px solid #ccc",
-        fontSize: "1rem",
-      }}
-    >
+    <select value={value} onChange={(e) => onChange(e.target.value)}>
       <option value="" disabled>
         Select...
       </option>

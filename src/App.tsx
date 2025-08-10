@@ -17,6 +17,7 @@ const App = () => {
 
   return (
     <WizardProvider>
+      {/* <FluidBackground /> */}
       <Wizard steps={wizardSteps} onSubmit={handleSubmit} />
     </WizardProvider>
   );
